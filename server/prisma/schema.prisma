@@ -1,0 +1,122 @@
+// This is your Prisma schema file.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  OPERATOR
+  VIEWER
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum RequestStatus {
+  CREATED
+  WAITING_PAYMENT
+  CRYPTO_RECEIVED
+  AML_REVIEW
+  READY_FOR_PAYOUT
+  PROCESSING
+  COMPLETED
+  ON_HOLD
+}
+
+enum PayoutStatus {
+  PENDING
+  READY
+  PROCESSING
+  COMPLETED
+  FAILED
+  ON_HOLD
+}
+
+enum PartnerStatus {
+  ACTIVE
+  LIMITED
+  LOW_RESERVE
+  PAUSED
+}
+
+model User {
+  id        String     @id @default(cuid())
+  email     String     @unique
+  name      String
+  role      Role       @default(OPERATOR)
+  createdAt DateTime   @default(now())
+  auditLogs AuditLog[]
+}
+
+model Client {
+  id          String    @id @default(cuid())
+  companyName String
+  country     String
+  riskLevel   RiskLevel @default(LOW)
+  createdAt   DateTime  @default(now())
+  requests    Request[]
+}
+
+model Request {
+  id             String        @id @default(cuid())
+  requestNumber  String        @unique
+  status         RequestStatus @default(CREATED)
+  cryptoAsset    String
+  network        String
+  cryptoAmount   Decimal
+  payoutCurrency String
+  payoutAmount   Decimal
+  createdAt      DateTime      @default(now())
+
+  clientId String
+  client   Client  @relation(fields: [clientId], references: [id])
+  payout   Payout?
+}
+
+model Payout {
+  id           String       @id @default(cuid())
+  payoutNumber String       @unique
+  status       PayoutStatus @default(PENDING)
+  amount       Decimal
+  currency     String
+  createdAt    DateTime     @default(now())
+
+  requestId String  @unique
+  request   Request @relation(fields: [requestId], references: [id])
+
+  partnerId String?
+  partner   Partner? @relation(fields: [partnerId], references: [id])
+}
+
+model Partner {
+  id         String        @id @default(cuid())
+  name       String
+  country    String
+  currency   String
+  reserve    Decimal
+  feePercent Decimal
+  status     PartnerStatus @default(ACTIVE)
+  payouts    Payout[]
+}
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  action       String
+  entityType   String
+  entityId     String
+  operatorName String
+  createdAt    DateTime @default(now())
+
+  operatorId String?
+  operator   User?   @relation(fields: [operatorId], references: [id])
+}
