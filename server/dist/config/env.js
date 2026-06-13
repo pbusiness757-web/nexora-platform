@@ -7,4 +7,3 @@ const env = {
     nodeEnv: process.env.NODE_ENV ?? "development",
 };
 module.exports = env;
-//# sourceMappingURL=env.js.map

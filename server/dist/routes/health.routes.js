@@ -5,4 +5,3 @@ router.get("/health", (_req, res) => {
     res.json({ status: "ok" });
 });
 module.exports = router;
-//# sourceMappingURL=health.routes.js.map
