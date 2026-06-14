@@ -37,8 +37,9 @@ AUTH_SECRET="change-me-to-a-long-random-string"
 # If unset or unreachable, static fallback rates are used.
 RATES_PROVIDER_URL=""
 
-# Rates cache TTL in ms (5–15 min recommended). NOTE: code reads RATES_TTL_MS.
-RATES_TTL_MS=600000
+# Rates cache TTL in ms (5–15 min recommended).
+RATES_CACHE_TTL_MS=600000
+# RATES_TTL_MS — legacy fallback, used only if RATES_CACHE_TTL_MS is unset.
 ```
 
 ### website/.env
@@ -48,8 +49,8 @@ RATES_TTL_MS=600000
 NEXT_PUBLIC_API_URL="http://localhost:4000"
 ```
 
-> ⚠️ Env naming: the spec lists `RATES_CACHE_TTL_MS`, but the code reads
-> **`RATES_TTL_MS`**. Use `RATES_TTL_MS` (or align the code later).
+> Env naming: use **`RATES_CACHE_TTL_MS`** (preferred). `RATES_TTL_MS` is a
+> legacy fallback the code still honours if the preferred var is unset.
 
 ## 3. Local run
 
