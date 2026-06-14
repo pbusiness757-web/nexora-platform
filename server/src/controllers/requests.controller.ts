@@ -1,6 +1,8 @@
 import express = require("express");
 import prisma = require("../services/prisma.service");
 import countryCurrency = require("../utils/countryCurrency");
+import rates = require("../services/rates.service");
+import finance = require("../services/finance.service");
 
 const ALLOWED_STATUSES = [
   "CREATED",
@@ -41,16 +43,8 @@ async function getRequestById(req: express.Request, res: express.Response) {
 
 async function createRequest(req: express.Request, res: express.Response) {
   try {
-    const {
-      requestNumber,
-      status,
-      cryptoAsset,
-      network,
-      cryptoAmount,
-      payoutAmount,
-      clientId,
-      country,
-    } = req.body;
+    const { requestNumber, status, cryptoAsset, network, cryptoAmount, clientId, country } =
+      req.body ?? {};
 
     // Payout currency is derived from the country, never trusted from the client.
     const payoutCurrency = countryCurrency.getPayoutCurrency(country);
@@ -58,6 +52,23 @@ async function createRequest(req: express.Request, res: express.Response) {
       res.status(400).json({ error: "Unsupported payout country" });
       return;
     }
+
+    const amount = Number(cryptoAmount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      res.status(400).json({ error: "Invalid crypto amount" });
+      return;
+    }
+
+    // payoutAmount and the rate are computed server-side — never trusted from the client.
+    const rate = await rates.getPayoutRate(payoutCurrency);
+    if (rate === null) {
+      res.status(503).json({ error: "Rates unavailable" });
+      return;
+    }
+    const payoutAmount = amount * rate;
+
+    // Fees/profit are computed server-side — never trusted from the client.
+    const fin = finance.computeFinance(payoutAmount);
 
     const request = await prisma.request.create({
       data: {
@@ -68,6 +79,13 @@ async function createRequest(req: express.Request, res: express.Response) {
         cryptoAmount,
         payoutCurrency,
         payoutAmount,
+        rateSnapshot: rate,
+        nexoraFeePercent: fin.nexoraFeePercent,
+        nexoraFeeAmount: fin.nexoraFeeAmount,
+        partnerFeePercent: fin.partnerFeePercent,
+        partnerFeeAmount: fin.partnerFeeAmount,
+        grossProfit: fin.grossProfit,
+        netPayoutAmount: fin.netPayoutAmount,
         clientId,
       },
     });

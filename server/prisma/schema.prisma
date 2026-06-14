@@ -76,6 +76,15 @@ model Request {
   cryptoAmount   Decimal
   payoutCurrency String
   payoutAmount   Decimal
+  rateSnapshot   Decimal?
+
+  nexoraFeePercent  Decimal  @default(2.0)
+  nexoraFeeAmount   Decimal?
+  partnerFeePercent Decimal  @default(1.0)
+  partnerFeeAmount  Decimal?
+  grossProfit       Decimal?
+  netPayoutAmount   Decimal?
+
   createdAt      DateTime      @default(now())
 
   clientId String
