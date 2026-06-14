@@ -1,3 +1,7 @@
 
 # local kimi-code installer
 install.ps1
+server/dist/
+server/prisma/dev.db
+server/prisma/*.db
+server/prisma/*.db-journal
