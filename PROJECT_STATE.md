@@ -10,3 +10,4 @@
 - Env note: rates TTL var is RATES_TTL_MS in code (spec said RATES_CACHE_TTL_MS).
 - Rates TTL env normalized: RATES_CACHE_TTL_MS preferred, RATES_TTL_MS legacy fallback.
 - Added server/.env.example and website/.env.example (placeholders only).
+- Added docs/MASTER_CONTEXT.md, docs/API.md, docs/FINANCE.md (MVP context package).
