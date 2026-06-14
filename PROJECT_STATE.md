@@ -6,3 +6,5 @@
 - Removed cross-currency totals: totalFiatVolume, totalNexoraFees, totalPartnerFees, totalGrossProfit.
 - Null finance fields on legacy requests are treated as 0.
 - Finance page (/admin/finance) updated for currency-safe response: Total Crypto Volume card + per-currency table from byCurrencyTotals; removed deleted cross-currency totals; added not-summed-across-currencies note.
+- DEPLOYMENT.md: stack, env vars (backend+frontend), local run, VPS/PM2/Nginx/Certbot plan, health checks, security checklist, MVP limitations.
+- Env note: rates TTL var is RATES_TTL_MS in code (spec said RATES_CACHE_TTL_MS).
