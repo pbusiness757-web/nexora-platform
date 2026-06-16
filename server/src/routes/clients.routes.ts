@@ -1,9 +1,9 @@
 import express = require("express");
 import clientsController = require("../controllers/clients.controller");
+import requireAuth = require("../middleware/requireAuth");
 
 const router = express.Router();
 
-router.get("/", clientsController.getClients);
-router.post("/", clientsController.createClient);
+router.use(requireAuth);
 
-export = router;
+router.get("/", clientsControll

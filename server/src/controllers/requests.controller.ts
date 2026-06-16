@@ -43,8 +43,31 @@ async function getRequestById(req: express.Request, res: express.Response) {
 
 async function createRequest(req: express.Request, res: express.Response) {
   try {
-    const { requestNumber, status, cryptoAsset, network, cryptoAmount, clientId, country } =
+    // status is NOT accepted from the client — always forced to CREATED.
+    const { requestNumber, cryptoAsset, network, cryptoAmount, clientId, country } =
       req.body ?? {};
+
+    // Validate required string fields.
+    if (typeof requestNumber !== "string" || requestNumber.trim() === "") {
+      res.status(400).json({ error: "requestNumber is required" });
+      return;
+    }
+    if (typeof cryptoAsset !== "string" || cryptoAsset.trim() === "") {
+      res.status(400).json({ error: "cryptoAsset is required" });
+      return;
+    }
+    if (typeof network !== "string" || network.trim() === "") {
+      res.status(400).json({ error: "network is required" });
+      return;
+    }
+    if (typeof clientId !== "string" || clientId.trim() === "") {
+      res.status(400).json({ error: "clientId is required" });
+      return;
+    }
+    if (typeof country !== "string" || country.trim() === "") {
+      res.status(400).json({ error: "country is required" });
+      return;
+    }
 
     // Payout currency is derived from the country, never trusted from the client.
     const payoutCurrency = countryCurrency.getPayoutCurrency(country);
@@ -72,47 +95,12 @@ async function createRequest(req: express.Request, res: express.Response) {
 
     const request = await prisma.request.create({
       data: {
-        requestNumber,
-        status,
-        cryptoAsset,
-        network,
+        requestNumber: requestNumber.trim(),
+        status: "CREATED", // always forced — never from client input
+        cryptoAsset: cryptoAsset.trim(),
+        network: network.trim(),
         cryptoAmount,
         payoutCurrency,
         payoutAmount,
         rateSnapshot: rate,
-        nexoraFeePercent: fin.nexoraFeePercent,
-        nexoraFeeAmount: fin.nexoraFeeAmount,
-        partnerFeePercent: fin.partnerFeePercent,
-        partnerFeeAmount: fin.partnerFeeAmount,
-        grossProfit: fin.grossProfit,
-        netPayoutAmount: fin.netPayoutAmount,
-        clientId,
-      },
-    });
-    res.status(201).json(request);
-  } catch (error) {
-    res.status(400).json({ error: "Failed to create request" });
-  }
-}
-
-async function updateStatus(req: express.Request, res: express.Response) {
-  try {
-    const { id } = req.params;
-    const { status } = req.body;
-
-    if (!ALLOWED_STATUSES.includes(status)) {
-      res.status(400).json({ error: "Invalid status" });
-      return;
-    }
-
-    const updated = await prisma.request.update({
-      where: { id: String(id) },
-      data: { status },
-    });
-    res.json(updated);
-  } catch (error) {
-    res.status(400).json({ error: "Failed to update status" });
-  }
-}
-
-export = { getRequests, getRequestById, createRequest, updateStatus };
+        nexoraFeePercent: fin.nexoraF

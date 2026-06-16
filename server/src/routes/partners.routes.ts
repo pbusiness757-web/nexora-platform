@@ -1,10 +1,10 @@
 import express = require("express");
 import partnersController = require("../controllers/partners.controller");
+import requireAuth = require("../middleware/requireAuth");
 
 const router = express.Router();
 
-router.get("/", partnersController.getPartners);
-router.post("/", partnersController.createPartner);
-router.patch("/:id", partnersController.updatePartner);
+router.use(requireAuth);
 
-export = router;
+router.get("/", partnersController.getPartners);
+router.post("/", partnersController.create
