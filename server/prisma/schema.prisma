@@ -73,17 +73,17 @@ model Request {
   status         RequestStatus @default(CREATED)
   cryptoAsset    String
   network        String
-  cryptoAmount   Decimal
+  cryptoAmount   Decimal // PG target: @db.Decimal(18,2) — money amount
   payoutCurrency String
-  payoutAmount   Decimal
-  rateSnapshot   Decimal?
+  payoutAmount   Decimal // PG target: @db.Decimal(18,2) — money amount
+  rateSnapshot   Decimal? // PG target: @db.Decimal(18,8) — exchange rate
 
-  nexoraFeePercent  Decimal  @default(2.0)
-  nexoraFeeAmount   Decimal?
-  partnerFeePercent Decimal  @default(1.0)
-  partnerFeeAmount  Decimal?
-  grossProfit       Decimal?
-  netPayoutAmount   Decimal?
+  nexoraFeePercent  Decimal  @default(2.0) // PG target: @db.Decimal(5,2) — percentage
+  nexoraFeeAmount   Decimal? // PG target: @db.Decimal(18,2) — money amount
+  partnerFeePercent Decimal  @default(1.0) // PG target: @db.Decimal(5,2) — percentage
+  partnerFeeAmount  Decimal? // PG target: @db.Decimal(18,2) — money amount
+  grossProfit       Decimal? // PG target: @db.Decimal(18,2) — money amount
+  netPayoutAmount   Decimal? // PG target: @db.Decimal(18,2) — money amount
 
   createdAt      DateTime      @default(now())
 
@@ -96,7 +96,7 @@ model Payout {
   id           String       @id @default(cuid())
   payoutNumber String       @unique
   status       PayoutStatus @default(PENDING)
-  amount       Decimal
+  amount       Decimal // PG target: @db.Decimal(18,2) — money amount
   currency     String
   createdAt    DateTime     @default(now())
 
@@ -112,8 +112,8 @@ model Partner {
   name       String
   country    String
   currency   String
-  reserve    Decimal
-  feePercent Decimal
+  reserve    Decimal // PG target: @db.Decimal(18,2) — money amount
+  feePercent Decimal // PG target: @db.Decimal(5,2) — percentage
   status     PartnerStatus @default(ACTIVE)
   payouts    Payout[]
 }

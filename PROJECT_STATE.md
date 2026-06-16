@@ -11,3 +11,4 @@
 - Rates TTL env normalized: RATES_CACHE_TTL_MS preferred, RATES_TTL_MS legacy fallback.
 - Added server/.env.example and website/.env.example (placeholders only).
 - Added docs/MASTER_CONTEXT.md, docs/API.md, docs/FINANCE.md (MVP context package).
+- Documented planned PostgreSQL Decimal precision (money 18,2; rates 18,8; percent 5,2) as schema comments + FINANCE.md; provider stays sqlite for now.

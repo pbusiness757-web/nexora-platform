@@ -36,6 +36,17 @@ because adding different currencies is economically meaningless. Only
 `totalCryptoVolume` is a single total — valid because crypto is a single base
 asset (USDT). Null finance fields on legacy requests are treated as 0.
 
+## Decimal precision (SQLite now → PostgreSQL planned)
+- **Current (SQLite):** the provider stores `Decimal` without fixed precision/scale;
+  `@db.Decimal(...)` native annotations are **not** added because the SQLite provider
+  rejects Postgres-native type attributes. Schema carries them as comments only.
+- **Planned (PostgreSQL):** apply native precision during the PG migration —
+  - money amounts (cryptoAmount, payoutAmount, *FeeAmount, grossProfit, netPayoutAmount,
+    Payout.amount, Partner.reserve): `@db.Decimal(18,2)`
+  - exchange rate (rateSnapshot): `@db.Decimal(18,8)`
+  - percentages (nexora/partner feePercent): `@db.Decimal(5,2)`
+- Server math still rounds money to 2 dp; PG precision will lock it at the DB layer.
+
 ## Known accounting limitations
 - Float arithmetic (JS `Number`, rounded to 2 dp) — not exact decimal ledger.
 - Fee percentages come from env defaults, not per-client/per-partner contracts.
