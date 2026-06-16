@@ -5,7 +5,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -73,17 +73,17 @@ model Request {
   status         RequestStatus @default(CREATED)
   cryptoAsset    String
   network        String
-  cryptoAmount   Decimal // PG target: @db.Decimal(18,2) — money amount
+  cryptoAmount   Decimal  @db.Decimal(18,2)
   payoutCurrency String
-  payoutAmount   Decimal // PG target: @db.Decimal(18,2) — money amount
-  rateSnapshot   Decimal? // PG target: @db.Decimal(18,8) — exchange rate
+  payoutAmount   Decimal  @db.Decimal(18,2)
+  rateSnapshot   Decimal? @db.Decimal(18,8)
 
-  nexoraFeePercent  Decimal  @default(2.0) // PG target: @db.Decimal(5,2) — percentage
-  nexoraFeeAmount   Decimal? // PG target: @db.Decimal(18,2) — money amount
-  partnerFeePercent Decimal  @default(1.0) // PG target: @db.Decimal(5,2) — percentage
-  partnerFeeAmount  Decimal? // PG target: @db.Decimal(18,2) — money amount
-  grossProfit       Decimal? // PG target: @db.Decimal(18,2) — money amount
-  netPayoutAmount   Decimal? // PG target: @db.Decimal(18,2) — money amount
+  nexoraFeePercent  Decimal  @default(2.0) @db.Decimal(5,2)
+  nexoraFeeAmount   Decimal? @db.Decimal(18,2)
+  partnerFeePercent Decimal  @default(1.0) @db.Decimal(5,2)
+  partnerFeeAmount  Decimal? @db.Decimal(18,2)
+  grossProfit       Decimal? @db.Decimal(18,2)
+  netPayoutAmount   Decimal? @db.Decimal(18,2)
 
   createdAt      DateTime      @default(now())
 
@@ -96,7 +96,7 @@ model Payout {
   id           String       @id @default(cuid())
   payoutNumber String       @unique
   status       PayoutStatus @default(PENDING)
-  amount       Decimal // PG target: @db.Decimal(18,2) — money amount
+  amount       Decimal  @db.Decimal(18,2)
   currency     String
   createdAt    DateTime     @default(now())
 
@@ -112,8 +112,8 @@ model Partner {
   name       String
   country    String
   currency   String
-  reserve    Decimal // PG target: @db.Decimal(18,2) — money amount
-  feePercent Decimal // PG target: @db.Decimal(5,2) — percentage
+  reserve    Decimal  @db.Decimal(18,2)
+  feePercent Decimal  @db.Decimal(5,2)
   status     PartnerStatus @default(ACTIVE)
   payouts    Payout[]
 }
