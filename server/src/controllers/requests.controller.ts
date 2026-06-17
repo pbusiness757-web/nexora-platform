@@ -76,42 +76,34 @@ async function createRequest(req: express.Request, res: express.Response): Promi
       req.body ?? {};
 
     if (typeof requestNumber !== "string" || requestNumber.trim() === "") {
-      res.status(400).json({ error: "requestNumber is required" });
-      return;
+      res.status(400).json({ error: "requestNumber is required" }); return;
     }
     if (typeof cryptoAsset !== "string" || cryptoAsset.trim() === "") {
-      res.status(400).json({ error: "cryptoAsset is required" });
-      return;
+      res.status(400).json({ error: "cryptoAsset is required" }); return;
     }
     if (typeof network !== "string" || network.trim() === "") {
-      res.status(400).json({ error: "network is required" });
-      return;
+      res.status(400).json({ error: "network is required" }); return;
     }
     if (typeof clientId !== "string" || clientId.trim() === "") {
-      res.status(400).json({ error: "clientId is required" });
-      return;
+      res.status(400).json({ error: "clientId is required" }); return;
     }
     if (typeof country !== "string" || country.trim() === "") {
-      res.status(400).json({ error: "country is required" });
-      return;
+      res.status(400).json({ error: "country is required" }); return;
     }
 
     const payoutCurrency = countryCurrency.getPayoutCurrency(country);
     if (!payoutCurrency) {
-      res.status(400).json({ error: "Unsupported payout country" });
-      return;
+      res.status(400).json({ error: "Unsupported payout country" }); return;
     }
 
     const amount = Number(cryptoAmount);
     if (!Number.isFinite(amount) || amount <= 0) {
-      res.status(400).json({ error: "Invalid crypto amount" });
-      return;
+      res.status(400).json({ error: "Invalid crypto amount" }); return;
     }
 
     const rate = await rates.getPayoutRate(payoutCurrency);
     if (rate === null) {
-      res.status(503).json({ error: "Rates unavailable" });
-      return;
+      res.status(503).json({ error: "Rates unavailable" }); return;
     }
     const payoutAmount = amount * rate;
     const fin = finance.computeFinance(payoutAmount);
@@ -159,16 +151,38 @@ async function updateStatus(req: express.Request, res: express.Response): Promis
       return;
     }
 
+    // Fetch current status for history record
+    const current = await prisma.request.findUnique({
+      where: { id: String(id) },
+      select: { status: true, requestNumber: true, clientAccountId: true },
+    });
+    if (!current) {
+      res.status(404).json({ error: "Request not found" });
+      return;
+    }
+
+    const changedBy = req.nexoraUser?.sub ?? "unknown";
+
     const updated = await prisma.request.update({
       where: { id: String(id) },
       data: { status },
     });
 
+    // Write status history record
+    prisma.requestStatusHistory.create({
+      data: {
+        requestId: updated.id,
+        fromStatus: current.status,
+        toStatus: status,
+        changedBy,
+      },
+    }).catch(() => { /* non-fatal */ });
+
     await audit.writeAuditLog({
       action: `STATUS_CHANGE:${status}`,
       entityType: "Request",
       entityId: updated.id,
-      operatorName: req.nexoraUser?.sub ?? "unknown",
+      operatorName: changedBy,
     });
 
     // Notify client if request is linked to a client portal account
@@ -178,7 +192,7 @@ async function updateStatus(req: express.Request, res: express.Response): Promis
         data: {
           clientAccountId: updated.clientAccountId,
           requestId: updated.id,
-          message: `Статус заявки #${updated.requestNumber} изменён: ${label}`,
+          message: `Статус заявки #${updated.requestNumber} изменён на: ${label}`,
           isRead: false,
         },
       }).catch(() => { /* non-fatal */ });
@@ -187,6 +201,19 @@ async function updateStatus(req: express.Request, res: express.Response): Promis
     res.json(updated);
   } catch (error) {
     res.status(400).json({ error: "Failed to update status" });
+  }
+}
+
+async function getStatusHistory(req: express.Request, res: express.Response): Promise<void> {
+  try {
+    const { id } = req.params;
+    const history = await prisma.requestStatusHistory.findMany({
+      where: { requestId: String(id) },
+      orderBy: { createdAt: "asc" },
+    });
+    res.json(history);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch status history" });
   }
 }
 
@@ -216,4 +243,4 @@ async function deleteRequest(req: express.Request, res: express.Response): Promi
   }
 }
 
-export = { getRequests, getRequestById, createRequest, updateStatus, deleteRequest };
+export = { getRequests, getRequestById, createRequest, updateStatus, getStatusHistory, deleteRequest };

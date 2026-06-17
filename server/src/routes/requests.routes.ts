@@ -7,9 +7,10 @@ const router = express.Router();
 router.use(requireAuth);
 
 router.get("/", requestsController.getRequests);
-router.get("/:id", requestsController.getRequestById);
 router.post("/", requestsController.createRequest);
+router.get("/:id", requestsController.getRequestById);
 router.patch("/:id/status", requestsController.updateStatus);
+router.get("/:id/status-history", requestsController.getStatusHistory);
 router.delete("/:id", requestsController.deleteRequest);
 
 export = router;

@@ -328,8 +328,34 @@ async function markNotificationsRead(req: express.Request, res: express.Response
       data: { isRead: true },
     });
     res.json({ ok: true });
+  } catch (error)
+async function getStatusHistory(req: express.Request, res: express.Response): Promise<void> {
+  try {
+    const accountId = req.nexoraClientUser!.sub;
+    const { id } = req.params;
+
+    // Ownership check first
+    const request = await prisma.request.findUnique({
+      where: { id: String(id) },
+      select: { clientAccountId: true },
+    });
+    if (!request) {
+      res.status(404).json({ error: "Request not found" });
+      return;
+    }
+    if (request.clientAccountId !== accountId) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+
+    const history = await prisma.requestStatusHistory.findMany({
+      where: { requestId: String(id) },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, fromStatus: true, toStatus: true, changedBy: true, createdAt: true },
+    });
+    res.json(history);
   } catch (error) {
-    res.status(500).json({ error: "Failed to update notifications" });
+    res.status(500).json({ error: "Failed to fetch status history" });
   }
 }
 
@@ -337,6 +363,7 @@ export = {
   createMyRequest,
   getMyRequests,
   getMyRequestById,
+  getStatusHistory,
   uploadProof,
   downloadProof,
   getNotifications,

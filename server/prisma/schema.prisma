@@ -104,6 +104,7 @@ model Request {
   clientAccount   ClientAccount? @relation(fields: [clientAccountId], references: [id])
   payout          Payout?
   proofUploads    ProofUpload[]
+  statusHistory   RequestStatusHistory[]
 }
 
 model Payout {
@@ -163,4 +164,14 @@ model Notification {
   message         String
   isRead          Boolean       @default(false)
   createdAt       DateTime      @default(now())
+}
+
+model RequestStatusHistory {
+  id         String   @id @default(cuid())
+  requestId  String
+  request    Request  @relation(fields: [requestId], references: [id])
+  fromStatus String
+  toStatus   String
+  changedBy  String
+  createdAt  DateTime @default(now())
 }
