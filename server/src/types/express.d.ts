@@ -5,5 +5,11 @@ declare namespace Express {
       role: string;
       exp: number;
     };
+    nexoraClientUser?: {
+      sub: string;
+      email: string;
+      role: "CLIENT";
+      exp: number;
+    };
   }
 }

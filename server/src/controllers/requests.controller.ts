@@ -16,18 +16,26 @@ const ALLOWED_STATUSES = [
   "ON_HOLD",
 ];
 
+const STATUS_LABELS: Record<string, string> = {
+  CREATED: "Создана",
+  WAITING_PAYMENT: "Ожидает оплаты",
+  CRYPTO_RECEIVED: "Крипта получена",
+  AML_REVIEW: "AML проверка",
+  READY_FOR_PAYOUT: "Готово к выплате",
+  PROCESSING: "В обработке",
+  COMPLETED: "Завершена",
+  ON_HOLD: "Приостановлена",
+};
+
 function parsePagination(query: express.Request["query"]): {
-  skip: number;
-  take: number;
-  page: number;
-  limit: number;
+  skip: number; take: number; page: number; limit: number;
 } {
   const page = Math.max(1, parseInt(String(query.page ?? "1"), 10) || 1);
   const limit = Math.min(100, Math.max(1, parseInt(String(query.limit ?? "50"), 10) || 50));
   return { skip: (page - 1) * limit, take: limit, page, limit };
 }
 
-async function getRequests(req: express.Request, res: express.Response) {
+async function getRequests(req: express.Request, res: express.Response): Promise<void> {
   try {
     const { skip, take, page, limit } = parsePagination(req.query);
     const [requests, total] = await Promise.all([
@@ -45,7 +53,7 @@ async function getRequests(req: express.Request, res: express.Response) {
   }
 }
 
-async function getRequestById(req: express.Request, res: express.Response) {
+async function getRequestById(req: express.Request, res: express.Response): Promise<void> {
   try {
     const { id } = req.params;
     const request = await prisma.request.findUnique({
@@ -62,13 +70,11 @@ async function getRequestById(req: express.Request, res: express.Response) {
   }
 }
 
-async function createRequest(req: express.Request, res: express.Response) {
+async function createRequest(req: express.Request, res: express.Response): Promise<void> {
   try {
-    // status is NOT accepted from the client — always forced to CREATED.
     const { requestNumber, cryptoAsset, network, cryptoAmount, clientId, country } =
       req.body ?? {};
 
-    // Validate required string fields.
     if (typeof requestNumber !== "string" || requestNumber.trim() === "") {
       res.status(400).json({ error: "requestNumber is required" });
       return;
@@ -90,7 +96,6 @@ async function createRequest(req: express.Request, res: express.Response) {
       return;
     }
 
-    // Payout currency is derived from the country, never trusted from the client.
     const payoutCurrency = countryCurrency.getPayoutCurrency(country);
     if (!payoutCurrency) {
       res.status(400).json({ error: "Unsupported payout country" });
@@ -103,21 +108,18 @@ async function createRequest(req: express.Request, res: express.Response) {
       return;
     }
 
-    // payoutAmount and the rate are computed server-side — never trusted from the client.
     const rate = await rates.getPayoutRate(payoutCurrency);
     if (rate === null) {
       res.status(503).json({ error: "Rates unavailable" });
       return;
     }
     const payoutAmount = amount * rate;
-
-    // Fees/profit are computed server-side — never trusted from the client.
     const fin = finance.computeFinance(payoutAmount);
 
     const request = await prisma.request.create({
       data: {
         requestNumber: requestNumber.trim(),
-        status: "CREATED", // always forced — never from client input
+        status: "CREATED",
         cryptoAsset: cryptoAsset.trim(),
         network: network.trim(),
         cryptoAmount,
@@ -147,7 +149,7 @@ async function createRequest(req: express.Request, res: express.Response) {
   }
 }
 
-async function updateStatus(req: express.Request, res: express.Response) {
+async function updateStatus(req: express.Request, res: express.Response): Promise<void> {
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -169,31 +171,40 @@ async function updateStatus(req: express.Request, res: express.Response) {
       operatorName: req.nexoraUser?.sub ?? "unknown",
     });
 
+    // Notify client if request is linked to a client portal account
+    if (updated.clientAccountId) {
+      const label = STATUS_LABELS[status] ?? status;
+      prisma.notification.create({
+        data: {
+          clientAccountId: updated.clientAccountId,
+          requestId: updated.id,
+          message: `Статус заявки #${updated.requestNumber} изменён: ${label}`,
+          isRead: false,
+        },
+      }).catch(() => { /* non-fatal */ });
+    }
+
     res.json(updated);
   } catch (error) {
     res.status(400).json({ error: "Failed to update status" });
   }
 }
 
-async function deleteRequest(req: express.Request, res: express.Response) {
+async function deleteRequest(req: express.Request, res: express.Response): Promise<void> {
   try {
     const { id } = req.params;
-
     const existing = await prisma.request.findUnique({ where: { id: String(id) } });
     if (!existing) {
       res.status(404).json({ error: "Request not found" });
       return;
     }
-
     await prisma.request.delete({ where: { id: String(id) } });
-
     await audit.writeAuditLog({
       action: "DELETE",
       entityType: "Request",
       entityId: String(id),
       operatorName: req.nexoraUser?.sub ?? "unknown",
     });
-
     res.json({ ok: true });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "";

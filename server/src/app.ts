@@ -10,10 +10,11 @@ import dashboardRoutes = require("./routes/dashboard.routes");
 import authRoutes = require("./routes/auth.routes");
 import ratesRoutes = require("./routes/rates.routes");
 import financeRoutes = require("./routes/finance.routes");
+import clientAuthRoutes = require("./routes/clientAuth.routes");
+import clientRequestsRoutes = require("./routes/clientRequests.routes");
 
 const app = express();
 
-// Auth cookies require a specific origin + credentials (cannot use "*").
 const CORS_ORIGIN = process.env.CORS_ORIGIN ?? "http://localhost:3000";
 
 app.use(
@@ -23,8 +24,9 @@ app.use(
 );
 app.use(cors({ origin: CORS_ORIGIN, credentials: true }));
 app.use(morgan("dev"));
-app.use(express.json());
+app.use(express.json({ limit: "12mb" })); // raised for base64 file uploads
 
+// Admin routes
 app.use("/api", healthRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/clients", clientsRoutes);
@@ -33,5 +35,9 @@ app.use("/api/partners", partnersRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/rates", ratesRoutes);
 app.use("/api/admin/finance", financeRoutes);
+
+// Client portal routes
+app.use("/api/client-auth", clientAuthRoutes);
+app.use("/api/client-requests", clientRequestsRoutes);
 
 export = app;

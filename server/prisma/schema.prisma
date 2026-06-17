@@ -67,6 +67,17 @@ model Client {
   requests    Request[]
 }
 
+model ClientAccount {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  createdAt    DateTime  @default(now())
+  lastLoginAt  DateTime?
+
+  requests      Request[]
+  notifications Notification[]
+}
+
 model Request {
   id             String        @id @default(cuid())
   requestNumber  String        @unique
@@ -87,9 +98,12 @@ model Request {
 
   createdAt      DateTime      @default(now())
 
-  clientId String
-  client   Client  @relation(fields: [clientId], references: [id])
-  payout   Payout?
+  clientId        String
+  client          Client         @relation(fields: [clientId], references: [id])
+  clientAccountId String?
+  clientAccount   ClientAccount? @relation(fields: [clientAccountId], references: [id])
+  payout          Payout?
+  proofUploads    ProofUpload[]
 }
 
 model Payout {
@@ -128,4 +142,25 @@ model AuditLog {
 
   operatorId String?
   operator   User?   @relation(fields: [operatorId], references: [id])
+}
+
+model ProofUpload {
+  id           String   @id @default(cuid())
+  requestId    String
+  request      Request  @relation(fields: [requestId], references: [id])
+  filename     String
+  originalName String
+  mimeType     String
+  size         Int
+  uploadedAt   DateTime @default(now())
+}
+
+model Notification {
+  id              String        @id @default(cuid())
+  clientAccountId String
+  clientAccount   ClientAccount @relation(fields: [clientAccountId], references: [id])
+  requestId       String?
+  message         String
+  isRead          Boolean       @default(false)
+  createdAt       DateTime      @default(now())
 }
