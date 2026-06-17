@@ -16,6 +16,7 @@ function requireAuth(
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
+  req.nexoraUser = payload;
   next();
 }
 

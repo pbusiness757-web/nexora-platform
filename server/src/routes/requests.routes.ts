@@ -8,4 +8,8 @@ router.use(requireAuth);
 
 router.get("/", requestsController.getRequests);
 router.get("/:id", requestsController.getRequestById);
-router.post("/", requestsController.createReques
+router.post("/", requestsController.createRequest);
+router.patch("/:id/status", requestsController.updateStatus);
+router.delete("/:id", requestsController.deleteRequest);
+
+export = router;

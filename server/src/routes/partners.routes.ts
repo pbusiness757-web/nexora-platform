@@ -7,4 +7,8 @@ const router = express.Router();
 router.use(requireAuth);
 
 router.get("/", partnersController.getPartners);
-router.post("/", partnersController.create
+router.post("/", partnersController.createPartner);
+router.patch("/:id", partnersController.updatePartner);
+router.delete("/:id", partnersController.deletePartner);
+
+export = router;

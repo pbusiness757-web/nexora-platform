@@ -3,6 +3,7 @@ import prisma = require("../services/prisma.service");
 import countryCurrency = require("../utils/countryCurrency");
 import rates = require("../services/rates.service");
 import finance = require("../services/finance.service");
+import audit = require("../utils/audit");
 
 const ALLOWED_STATUSES = [
   "CREATED",
@@ -15,10 +16,30 @@ const ALLOWED_STATUSES = [
   "ON_HOLD",
 ];
 
-async function getRequests(_req: express.Request, res: express.Response) {
+function parsePagination(query: express.Request["query"]): {
+  skip: number;
+  take: number;
+  page: number;
+  limit: number;
+} {
+  const page = Math.max(1, parseInt(String(query.page ?? "1"), 10) || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(String(query.limit ?? "50"), 10) || 50));
+  return { skip: (page - 1) * limit, take: limit, page, limit };
+}
+
+async function getRequests(req: express.Request, res: express.Response) {
   try {
-    const requests = await prisma.request.findMany();
-    res.json(requests);
+    const { skip, take, page, limit } = parsePagination(req.query);
+    const [requests, total] = await Promise.all([
+      prisma.request.findMany({
+        orderBy: { createdAt: "desc" },
+        include: { client: { select: { id: true, companyName: true } } },
+        skip,
+        take,
+      }),
+      prisma.request.count(),
+    ]);
+    res.json({ data: requests, total, page, limit });
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch requests" });
   }
@@ -103,4 +124,85 @@ async function createRequest(req: express.Request, res: express.Response) {
         payoutCurrency,
         payoutAmount,
         rateSnapshot: rate,
-        nexoraFeePercent: fin.nexoraF
+        nexoraFeePercent: fin.nexoraFeePercent,
+        nexoraFeeAmount: fin.nexoraFeeAmount,
+        partnerFeePercent: fin.partnerFeePercent,
+        partnerFeeAmount: fin.partnerFeeAmount,
+        grossProfit: fin.grossProfit,
+        netPayoutAmount: fin.netPayoutAmount,
+        clientId,
+      },
+    });
+
+    await audit.writeAuditLog({
+      action: "CREATE",
+      entityType: "Request",
+      entityId: request.id,
+      operatorName: req.nexoraUser?.sub ?? "unknown",
+    });
+
+    res.status(201).json(request);
+  } catch (error) {
+    res.status(400).json({ error: "Failed to create request" });
+  }
+}
+
+async function updateStatus(req: express.Request, res: express.Response) {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!ALLOWED_STATUSES.includes(status)) {
+      res.status(400).json({ error: "Invalid status" });
+      return;
+    }
+
+    const updated = await prisma.request.update({
+      where: { id: String(id) },
+      data: { status },
+    });
+
+    await audit.writeAuditLog({
+      action: `STATUS_CHANGE:${status}`,
+      entityType: "Request",
+      entityId: updated.id,
+      operatorName: req.nexoraUser?.sub ?? "unknown",
+    });
+
+    res.json(updated);
+  } catch (error) {
+    res.status(400).json({ error: "Failed to update status" });
+  }
+}
+
+async function deleteRequest(req: express.Request, res: express.Response) {
+  try {
+    const { id } = req.params;
+
+    const existing = await prisma.request.findUnique({ where: { id: String(id) } });
+    if (!existing) {
+      res.status(404).json({ error: "Request not found" });
+      return;
+    }
+
+    await prisma.request.delete({ where: { id: String(id) } });
+
+    await audit.writeAuditLog({
+      action: "DELETE",
+      entityType: "Request",
+      entityId: String(id),
+      operatorName: req.nexoraUser?.sub ?? "unknown",
+    });
+
+    res.json({ ok: true });
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "";
+    if (msg.includes("Foreign key constraint") || msg.includes("foreign key")) {
+      res.status(409).json({ error: "Cannot delete request with existing payout" });
+      return;
+    }
+    res.status(400).json({ error: "Failed to delete request" });
+  }
+}
+
+export = { getRequests, getRequestById, createRequest, updateStatus, deleteRequest };

@@ -6,4 +6,9 @@ const router = express.Router();
 
 router.use(requireAuth);
 
-router.get("/", clientsControll
+router.get("/", clientsController.getClients);
+router.post("/", clientsController.createClient);
+router.patch("/:id", clientsController.updateClient);
+router.delete("/:id", clientsController.deleteClient);
+
+export = router;

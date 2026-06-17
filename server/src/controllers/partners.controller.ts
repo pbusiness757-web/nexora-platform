@@ -1,13 +1,29 @@
 import express = require("express");
 import prisma = require("../services/prisma.service");
 import prismaClient = require("@prisma/client");
+import audit = require("../utils/audit");
 
 const PARTNER_STATUSES = ["ACTIVE", "LIMITED", "LOW_RESERVE", "PAUSED"];
 
-async function getPartners(_req: express.Request, res: express.Response) {
+function parsePagination(query: express.Request["query"]): {
+  skip: number;
+  take: number;
+  page: number;
+  limit: number;
+} {
+  const page = Math.max(1, parseInt(String(query.page ?? "1"), 10) || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(String(query.limit ?? "50"), 10) || 50));
+  return { skip: (page - 1) * limit, take: limit, page, limit };
+}
+
+async function getPartners(req: express.Request, res: express.Response) {
   try {
-    const partners = await prisma.partner.findMany({ orderBy: { name: "asc" } });
-    res.json(partners);
+    const { skip, take, page, limit } = parsePagination(req.query);
+    const [partners, total] = await Promise.all([
+      prisma.partner.findMany({ orderBy: { name: "asc" }, skip, take }),
+      prisma.partner.count(),
+    ]);
+    res.json({ data: partners, total, page, limit });
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch partners" });
   }
@@ -49,6 +65,14 @@ async function createPartner(req: express.Request, res: express.Response) {
         ...(status ? { status } : {}),
       },
     });
+
+    await audit.writeAuditLog({
+      action: "CREATE",
+      entityType: "Partner",
+      entityId: partner.id,
+      operatorName: req.nexoraUser?.sub ?? "unknown",
+    });
+
     res.status(201).json(partner);
   } catch (error) {
     res.status(400).json({ error: "Failed to create partner" });
@@ -75,10 +99,48 @@ async function updatePartner(req: express.Request, res: express.Response) {
           : {}),
       },
     });
+
+    await audit.writeAuditLog({
+      action: "UPDATE",
+      entityType: "Partner",
+      entityId: partner.id,
+      operatorName: req.nexoraUser?.sub ?? "unknown",
+    });
+
     res.json(partner);
   } catch (error) {
     res.status(400).json({ error: "Failed to update partner" });
   }
 }
 
-export = { getPartners, createPartner, updatePartner };
+async function deletePartner(req: express.Request, res: express.Response) {
+  try {
+    const { id } = req.params;
+
+    const existing = await prisma.partner.findUnique({ where: { id: String(id) } });
+    if (!existing) {
+      res.status(404).json({ error: "Partner not found" });
+      return;
+    }
+
+    await prisma.partner.delete({ where: { id: String(id) } });
+
+    await audit.writeAuditLog({
+      action: "DELETE",
+      entityType: "Partner",
+      entityId: String(id),
+      operatorName: req.nexoraUser?.sub ?? "unknown",
+    });
+
+    res.json({ ok: true });
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "";
+    if (msg.includes("Foreign key constraint") || msg.includes("foreign key")) {
+      res.status(409).json({ error: "Cannot delete partner with existing payouts" });
+      return;
+    }
+    res.status(400).json({ error: "Failed to delete partner" });
+  }
+}
+
+export = { getPartners, createPartner, updatePartner, deletePartner };
