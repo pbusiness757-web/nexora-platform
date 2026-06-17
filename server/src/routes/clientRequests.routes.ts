@@ -7,6 +7,7 @@ const router = express.Router();
 router.use(requireClientAuth);
 
 router.get("/", clientRequestsController.getMyRequests);
+router.post("/", clientRequestsController.createMyRequest);
 router.get("/notifications", clientRequestsController.getNotifications);
 router.post("/notifications/read", clientRequestsController.markNotificationsRead);
 router.get("/:id", clientRequestsController.getMyRequestById);

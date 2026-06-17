@@ -212,9 +212,9 @@ async function getMyRequestById(req: express.Request, res: express.Response): Pr
 async function uploadProof(req: express.Request, res: express.Response): Promise<void> {
   try {
     const accountId = req.nexoraClientUser!.sub;
-    const { id } = req.params;
+    const requestId = String(req.params.id);
 
-    const request = await prisma.request.findUnique({ where: { id: String(id) } });
+    const request = await prisma.request.findUnique({ where: { id: requestId } });
     if (!request) {
       res.status(404).json({ error: "Request not found" });
       return;
@@ -255,11 +255,11 @@ async function uploadProof(req: express.Request, res: express.Response): Promise
     const safeExt = ["jpg", "jpeg", "png", "webp", "pdf"].includes(ext) ? ext : "bin";
     const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${safeExt}`;
 
-    const dir = ensureUploadsDir(id);
+    const dir = ensureUploadsDir(requestId);
     fs.writeFileSync(path.join(dir, filename), buffer);
 
     const upload = await prisma.proofUpload.create({
-      data: { requestId: id, filename, originalName: originalName.trim(), mimeType, size: buffer.length },
+      data: { requestId, filename, originalName: originalName.trim(), mimeType, size: buffer.length },
     });
 
     res.status(201).json({ id: upload.id, originalName: upload.originalName, size: upload.size, uploadedAt: upload.uploadedAt });
