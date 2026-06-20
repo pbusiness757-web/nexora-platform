@@ -328,7 +328,11 @@ async function markNotificationsRead(req: express.Request, res: express.Response
       data: { isRead: true },
     });
     res.json({ ok: true });
-  } catch (error)
+  } catch (error) {
+    res.status(500).json({ error: "Failed to update notifications" });
+  }
+}
+
 async function getStatusHistory(req: express.Request, res: express.Response): Promise<void> {
   try {
     const accountId = req.nexoraClientUser!.sub;
