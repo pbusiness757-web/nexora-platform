@@ -33,6 +33,13 @@ enum RequestStatus {
   ON_HOLD
 }
 
+enum AmlStatus {
+  PENDING
+  PASSED
+  REVIEW
+  REJECTED
+}
+
 enum PayoutStatus {
   PENDING
   READY
@@ -95,6 +102,12 @@ model Request {
   partnerFeeAmount  Decimal? @db.Decimal(18,2)
   grossProfit       Decimal? @db.Decimal(18,2)
   netPayoutAmount   Decimal? @db.Decimal(18,2)
+
+  amlStatus      AmlStatus @default(PENDING)
+  riskScore      Int?
+  amlComment     String?
+  amlReviewedAt  DateTime?
+  amlReviewedBy  String?
 
   createdAt      DateTime      @default(now())
 

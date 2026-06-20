@@ -151,13 +151,22 @@ async function updateStatus(req: express.Request, res: express.Response): Promis
       return;
     }
 
-    // Fetch current status for history record
+    // Fetch current status and amlStatus for history record and blocking check
     const current = await prisma.request.findUnique({
       where: { id: String(id) },
-      select: { status: true, requestNumber: true, clientAccountId: true },
+      select: { status: true, requestNumber: true, clientAccountId: true, amlStatus: true },
     });
     if (!current) {
       res.status(404).json({ error: "Request not found" });
+      return;
+    }
+
+    // Block payout progression when AML is REJECTED
+    const AML_BLOCKED_STATUSES = ["READY_FOR_PAYOUT", "PROCESSING", "COMPLETED"];
+    if (AML_BLOCKED_STATUSES.includes(status) && current.amlStatus === "REJECTED") {
+      res.status(422).json({
+        error: "AML check failed — cannot progress to payout stages while AML status is REJECTED",
+      });
       return;
     }
 
