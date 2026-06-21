@@ -125,6 +125,7 @@ async function createRequest(req: express.Request, res: express.Response): Promi
         grossProfit: fin.grossProfit,
         netPayoutAmount: fin.netPayoutAmount,
         clientId,
+        country: country.trim(),
       },
     });
 
@@ -165,7 +166,7 @@ async function updateStatus(req: express.Request, res: express.Response): Promis
     const AML_BLOCKED_STATUSES = ["READY_FOR_PAYOUT", "PROCESSING", "COMPLETED"];
     if (AML_BLOCKED_STATUSES.includes(status) && current.amlStatus === "REJECTED") {
       res.status(422).json({
-        error: "AML check failed — cannot progress to payout stages while AML status is REJECTED",
+        error: "AML check failed -- cannot progress to payout stages while AML status is REJECTED",
       });
       return;
     }
@@ -188,7 +189,7 @@ async function updateStatus(req: express.Request, res: express.Response): Promis
     }).catch(() => { /* non-fatal */ });
 
     await audit.writeAuditLog({
-      action: `STATUS_CHANGE:${status}`,
+      action: "STATUS_CHANGE:" + status,
       entityType: "Request",
       entityId: updated.id,
       operatorName: changedBy,
@@ -201,7 +202,7 @@ async function updateStatus(req: express.Request, res: express.Response): Promis
         data: {
           clientAccountId: updated.clientAccountId,
           requestId: updated.id,
-          message: `Статус заявки #${updated.requestNumber} изменён на: ${label}`,
+          message: "Статус заявки #" + updated.requestNumber + " изменён на: " + label,
           isRead: false,
         },
       }).catch(() => { /* non-fatal */ });

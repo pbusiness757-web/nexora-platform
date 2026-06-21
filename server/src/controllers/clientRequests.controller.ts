@@ -135,6 +135,7 @@ async function createMyRequest(req: express.Request, res: express.Response): Pro
         netPayoutAmount: fin.netPayoutAmount,
         clientId,
         clientAccountId: accountId,
+        country: country.trim(),
       },
     });
 

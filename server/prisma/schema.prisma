@@ -109,6 +109,8 @@ model Request {
   amlReviewedAt  DateTime?
   amlReviewedBy  String?
 
+  country        String?
+
   createdAt      DateTime      @default(now())
 
   clientId        String
