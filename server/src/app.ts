@@ -12,6 +12,8 @@ import ratesRoutes = require("./routes/rates.routes");
 import financeRoutes = require("./routes/finance.routes");
 import clientAuthRoutes = require("./routes/clientAuth.routes");
 import clientRequestsRoutes = require("./routes/clientRequests.routes");
+import payoutsRoutes = require("./routes/payouts.routes");
+import auditLogsRoutes = require("./routes/auditLogs.routes");
 
 const app = express();
 
@@ -35,6 +37,8 @@ app.use("/api/partners", partnersRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/rates", ratesRoutes);
 app.use("/api/admin/finance", financeRoutes);
+app.use("/api/payouts", payoutsRoutes);
+app.use("/api/audit-logs", auditLogsRoutes);
 
 // Client portal routes
 app.use("/api/client-auth", clientAuthRoutes);
