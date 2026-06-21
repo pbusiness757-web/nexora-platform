@@ -38,14 +38,22 @@ function parsePagination(query: express.Request["query"]): {
 async function getRequests(req: express.Request, res: express.Response): Promise<void> {
   try {
     const { skip, take, page, limit } = parsePagination(req.query);
+
+    // Optional filters
+    const where: Record<string, unknown> = {};
+    if (req.query.status)    where.status    = String(req.query.status);
+    if (req.query.amlStatus) where.amlStatus = String(req.query.amlStatus);
+    if (req.query.country)   where.country   = String(req.query.country);
+
     const [requests, total] = await Promise.all([
       prisma.request.findMany({
+        where,
         orderBy: { createdAt: "desc" },
         include: { client: { select: { id: true, companyName: true } } },
         skip,
         take,
       }),
-      prisma.request.count(),
+      prisma.request.count({ where }),
     ]);
     res.json({ data: requests, total, page, limit });
   } catch (error) {
@@ -245,12 +253,4 @@ async function deleteRequest(req: express.Request, res: express.Response): Promi
     res.json({ ok: true });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "";
-    if (msg.includes("Foreign key constraint") || msg.includes("foreign key")) {
-      res.status(409).json({ error: "Cannot delete request with existing payout" });
-      return;
-    }
-    res.status(400).json({ error: "Failed to delete request" });
-  }
-}
-
-export = { getRequests, getRequestById, createRequest, updateStatus, getStatusHistory, deleteRequest };
+    if (msg.includes("Foreign key constrai

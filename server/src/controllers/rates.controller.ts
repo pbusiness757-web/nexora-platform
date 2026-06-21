@@ -10,4 +10,4 @@ async function getRates(_req: express.Request, res: express.Response) {
   }
 }
 
-export = { getRates };
+async function updateRat

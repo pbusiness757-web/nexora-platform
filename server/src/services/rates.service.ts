@@ -79,4 +79,5 @@ async function getPayoutRate(currency: string): Promise<number | null> {
   return typeof rate === "number" ? rate : null;
 }
 
-export = { getRates, getPayoutRate, PAYOUT_CURRENCIES };
+/**
+ * Overrides the in-memory cache with manually-suppli
