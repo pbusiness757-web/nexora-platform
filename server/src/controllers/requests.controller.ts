@@ -5,6 +5,7 @@ import rates = require("../services/rates.service");
 import finance = require("../services/finance.service");
 import audit = require("../utils/audit");
 import * as email from "../services/email.service";
+import * as tg from "../services/telegram.service";
 
 const ALLOWED_STATUSES = [
   "CREATED",
@@ -231,6 +232,13 @@ async function updateStatus(req: express.Request, res: express.Response): Promis
         }).catch(() => { /* non-fatal */ });
       }).catch(() => { /* non-fatal */ });
     }
+
+    // Telegram — fire and forget
+    tg.notifyStatusChanged({
+      requestNumber: updated.requestNumber,
+      newStatus:     status,
+      changedBy,
+    }).catch(() => { /* non-fatal */ });
 
     res.json(updated);
   } catch (error) {

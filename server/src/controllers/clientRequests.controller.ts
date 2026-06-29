@@ -8,6 +8,7 @@ import countryCurrency = require("../utils/countryCurrency");
 import rates = require("../services/rates.service");
 import finance = require("../services/finance.service");
 import * as email from "../services/email.service";
+import * as tg from "../services/telegram.service";
 
 const UPLOADS_DIR = path.join(__dirname, "..", "..", "uploads");
 
@@ -164,6 +165,15 @@ async function createMyRequest(req: express.Request, res: express.Response): Pro
         payoutCurrency: request.payoutCurrency,
         payoutAmount: String(request.payoutAmount),
       }).catch(() => { /* non-fatal */ });
+    }).catch(() => { /* non-fatal */ });
+
+    // Telegram — fire and forget
+    tg.notifyNewRequest({
+      requestNumber:  request.requestNumber,
+      cryptoAmount:   String(request.cryptoAmount),
+      cryptoAsset:    request.cryptoAsset,
+      payoutCurrency: request.payoutCurrency,
+      country:        request.country ?? "",
     }).catch(() => { /* non-fatal */ });
 
     res.status(201).json(request);
