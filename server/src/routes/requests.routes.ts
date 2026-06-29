@@ -8,6 +8,7 @@ const router = express.Router();
 
 router.use(requireAuth);
 
+router.get("/export",      requestsController.exportCsv);
 router.get("/",            requestsController.getRequests);
 router.post("/",           requestsController.createRequest);
 router.get("/:id",         requestsController.getRequestById);

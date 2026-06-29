@@ -5,5 +5,6 @@ import requireAuth = require("../middleware/requireAuth");
 const router = express.Router();
 
 router.get("/summary", requireAuth, financeController.getSummary);
+router.get("/export",  requireAuth, financeController.exportCsv);
 
 export = router;

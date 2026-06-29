@@ -4,6 +4,7 @@ import countryCurrency = require("../utils/countryCurrency");
 import rates = require("../services/rates.service");
 import finance = require("../services/finance.service");
 import audit = require("../utils/audit");
+import * as email from "../services/email.service";
 
 const ALLOWED_STATUSES = [
   "CREATED",
@@ -214,6 +215,21 @@ async function updateStatus(req: express.Request, res: express.Response): Promis
           isRead: false,
         },
       }).catch(() => { /* non-fatal */ });
+
+      // Send email notification
+      prisma.clientAccount.findUnique({
+        where: { id: updated.clientAccountId },
+        select: { email: true },
+      }).then((account: { email: string } | null) => {
+        if (!account?.email) return;
+        email.sendStatusChanged({
+          clientEmail: account.email,
+          requestNumber: updated.requestNumber,
+          newStatus: status,
+          payoutAmount: String(updated.payoutAmount),
+          payoutCurrency: updated.payoutCurrency,
+        }).catch(() => { /* non-fatal */ });
+      }).catch(() => { /* non-fatal */ });
     }
 
     res.json(updated);
@@ -253,4 +269,58 @@ async function deleteRequest(req: express.Request, res: express.Response): Promi
     res.json({ ok: true });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "";
-    if (msg.includes("Foreign key constrai
+    if (msg.includes("Foreign key constraint") || msg.includes("foreign key")) {
+      res.status(409).json({ error: "Cannot delete request with existing payout" });
+      return;
+    }
+    res.status(400).json({ error: "Failed to delete request" });
+  }
+}
+
+async function exportCsv(req: express.Request, res: express.Response): Promise<void> {
+  try {
+    const where: Record<string, unknown> = {};
+    if (req.query.status)    where.status    = String(req.query.status);
+    if (req.query.country)   where.country   = String(req.query.country);
+    if (req.query.amlStatus) where.amlStatus = String(req.query.amlStatus);
+
+    const requests = await prisma.request.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      take: 10000,
+      include: { client: { select: { email: true, companyName: true } } },
+    });
+
+    const { toCsv } = await import("../utils/csv");
+    const headers = [
+      "Номер", "Дата", "Статус", "Клиент", "Email клиента",
+      "Актив", "Сеть", "Сумма крипто", "Валюта выплаты", "Сумма выплаты",
+      "Страна", "AML статус", "Риск-балл",
+    ];
+    const rows = requests.map((r: Record<string, unknown> & { requestNumber: string; createdAt: Date; status: string; cryptoAsset: string; network: string; cryptoAmount: unknown; payoutCurrency: string; payoutAmount: unknown; country: unknown; amlStatus: unknown; riskScore: unknown; client: unknown }) => [
+      r.requestNumber,
+      r.createdAt.toISOString().slice(0, 10),
+      r.status,
+      (r.client as { companyName?: string } | null)?.companyName ?? "",
+      (r.client as { email?: string } | null)?.email ?? "",
+      r.cryptoAsset,
+      r.network,
+      String(r.cryptoAmount),
+      r.payoutCurrency,
+      String(r.payoutAmount),
+      r.country ?? "",
+      r.amlStatus ?? "",
+      r.riskScore !== null && r.riskScore !== undefined ? String(r.riskScore) : "",
+    ]);
+
+    const csv = toCsv(headers, rows);
+    const filename = `nexora-requests-${new Date().toISOString().slice(0, 10)}.csv`;
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.send("﻿" + csv); // BOM for Excel
+  } catch {
+    res.status(500).json({ error: "Export failed" });
+  }
+}
+
+export = { getRequests, getRequestById, createRequest, updateStatus, getStatusHistory, deleteRequest, exportCsv };

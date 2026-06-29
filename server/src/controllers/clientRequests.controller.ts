@@ -7,6 +7,7 @@ import prisma = require("../services/prisma.service");
 import countryCurrency = require("../utils/countryCurrency");
 import rates = require("../services/rates.service");
 import finance = require("../services/finance.service");
+import * as email from "../services/email.service";
 
 const UPLOADS_DIR = path.join(__dirname, "..", "..", "uploads");
 
@@ -147,6 +148,22 @@ async function createMyRequest(req: express.Request, res: express.Response): Pro
         message: `Заявка #${request.requestNumber} создана`,
         isRead: false,
       },
+    }).catch(() => { /* non-fatal */ });
+
+    // Email — fire and forget
+    prisma.clientAccount.findUnique({
+      where: { id: accountId },
+      select: { email: true },
+    }).then((account: { email: string } | null) => {
+      if (!account?.email) return;
+      email.sendRequestCreated({
+        clientEmail: account.email,
+        requestNumber: request.requestNumber,
+        cryptoAmount: String(request.cryptoAmount),
+        cryptoAsset: request.cryptoAsset,
+        payoutCurrency: request.payoutCurrency,
+        payoutAmount: String(request.payoutAmount),
+      }).catch(() => { /* non-fatal */ });
     }).catch(() => { /* non-fatal */ });
 
     res.status(201).json(request);
