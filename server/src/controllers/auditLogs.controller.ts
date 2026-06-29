@@ -20,7 +20,7 @@ async function listAuditLogs(req: express.Request, res: express.Response) {
         take: limit,
         orderBy: { createdAt: "desc" },
         include: {
-          admin: { select: { email: true } },
+          operator: { select: { email: true } },
         },
       }),
       prisma.auditLog.count({ where }),

@@ -4,4 +4,7 @@ import requireAuth = require("../middleware/requireAuth");
 
 const router = express.Router();
 
-rout
+router.get("/",  ratesController.getRates);
+router.put("/",  requireAuth, ratesController.updateRates);
+
+export = router;

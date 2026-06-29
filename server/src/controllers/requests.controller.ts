@@ -313,7 +313,7 @@ async function exportCsv(req: express.Request, res: express.Response): Promise<v
       r.riskScore !== null && r.riskScore !== undefined ? String(r.riskScore) : "",
     ]);
 
-    const csv = toCsv(headers, rows);
+    const csv = toCsv(headers, rows as unknown as (string | number | null | undefined)[][]);
     const filename = `nexora-requests-${new Date().toISOString().slice(0, 10)}.csv`;
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);

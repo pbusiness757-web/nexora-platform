@@ -24,7 +24,7 @@ async function listPayouts(req: express.Request, res: express.Response) {
               cryptoAsset: true,
               payoutCurrency: true,
               country: true,
-              client: { select: { email: true } },
+              client: { select: { companyName: true } },
             },
           },
           partner: { select: { name: true, country: true } },
@@ -42,7 +42,7 @@ async function listPayouts(req: express.Request, res: express.Response) {
 async function getPayout(req: express.Request, res: express.Response) {
   try {
     const payout = await prisma.payout.findUnique({
-      where: { id: req.params.id },
+      where: { id: String(req.params.id) },
       include: {
         request: {
           select: {
@@ -52,7 +52,7 @@ async function getPayout(req: express.Request, res: express.Response) {
             cryptoAmount: true,
             payoutCurrency: true,
             country: true,
-            client: { select: { email: true } },
+            client: { select: { companyName: true } },
           },
         },
         partner: true,
@@ -73,8 +73,8 @@ async function updatePayoutStatus(req: express.Request, res: express.Response) {
       return res.status(422).json({ error: "Invalid payout status" });
     }
     const payout = await prisma.payout.update({
-      where: { id: req.params.id },
-      data: { status },
+      where: { id: String(req.params.id) },
+      data: { status: status as any },
     });
     res.json(payout);
   } catch {

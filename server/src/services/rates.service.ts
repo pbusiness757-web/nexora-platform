@@ -80,4 +80,28 @@ async function getPayoutRate(currency: string): Promise<number | null> {
 }
 
 /**
- * Overrides the in-memory cache with manually-suppli
+ * Overrides the in-memory cache with manually-supplied fiat rates.
+ * Persists until the next TTL cycle.
+ */
+function setRates(incoming: Partial<Record<PayoutCurrency, number>>): RatesSnapshot {
+  const current = cache?.data.rates ?? { ...FALLBACK_RATES };
+  const merged: Record<PayoutCurrency, number> = { ...current };
+
+  for (const cur of PAYOUT_CURRENCIES) {
+    const v = incoming[cur];
+    if (typeof v === "number" && Number.isFinite(v) && v > 0) {
+      merged[cur] = v;
+    }
+  }
+
+  const data: RatesSnapshot = {
+    base: "USDT",
+    rates: merged,
+    source: "fallback",
+    updatedAt: new Date().toISOString(),
+  };
+  cache = { data, expiresAt: Date.now() + TTL_MS };
+  return data;
+}
+
+export = { getRates, getPayoutRate, setRates, PAYOUT_CURRENCIES };
