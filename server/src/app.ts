@@ -15,6 +15,7 @@ import clientRequestsRoutes = require("./routes/clientRequests.routes");
 import payoutsRoutes = require("./routes/payouts.routes");
 import auditLogsRoutes = require("./routes/auditLogs.routes");
 import adminsRoutes = require("./routes/admins.routes");
+import telegramRoutes = require("./routes/telegram.routes");
 
 const app = express();
 
@@ -45,5 +46,8 @@ app.use("/api/admins", adminsRoutes);
 // Client portal routes
 app.use("/api/client-auth", clientAuthRoutes);
 app.use("/api/client-requests", clientRequestsRoutes);
+
+// Telegram bot webhook
+app.use("/api/telegram", telegramRoutes);
 
 export = app;
