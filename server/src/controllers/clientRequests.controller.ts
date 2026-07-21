@@ -178,6 +178,7 @@ async function createMyRequest(req: express.Request, res: express.Response): Pro
 
     // Telegram — fire and forget
     tg.notifyNewRequest({
+      requestId:      request.id,
       requestNumber:  request.requestNumber,
       cryptoAmount:   String(request.cryptoAmount),
       cryptoAsset:    request.cryptoAsset,

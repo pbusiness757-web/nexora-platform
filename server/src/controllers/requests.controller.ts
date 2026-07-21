@@ -241,6 +241,7 @@ async function updateStatus(req: express.Request, res: express.Response): Promis
 
     // Telegram — fire and forget
     tg.notifyStatusChanged({
+      requestId:     updated.id,
       requestNumber: updated.requestNumber,
       newStatus:     status,
       changedBy,
