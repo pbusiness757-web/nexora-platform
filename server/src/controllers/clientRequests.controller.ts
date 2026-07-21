@@ -37,7 +37,7 @@ function generateRequestNumber(): string {
 async function createMyRequest(req: express.Request, res: express.Response): Promise<void> {
   try {
     const accountId = req.nexoraClientUser!.sub;
-    const { cryptoAsset, network, cryptoAmount, country } = req.body ?? {};
+    const { cryptoAsset, network, cryptoAmount, country, recipientDetails } = req.body ?? {};
 
     // --- Validation ---
     if (typeof cryptoAsset !== "string" || cryptoAsset.trim() === "") {
@@ -50,6 +50,10 @@ async function createMyRequest(req: express.Request, res: express.Response): Pro
     }
     if (typeof country !== "string" || country.trim() === "") {
       res.status(400).json({ error: "country is required" });
+      return;
+    }
+    if (typeof recipientDetails !== "string" || recipientDetails.trim() === "") {
+      res.status(400).json({ error: "recipientDetails is required" });
       return;
     }
 
@@ -66,13 +70,17 @@ async function createMyRequest(req: express.Request, res: express.Response): Pro
     }
 
     // --- Derive financials server-side ---
+    // Convert crypto amount to USDT equivalent first (stablecoins = 1:1)
+    const cryptoToUsdt = await rates.getCryptoToUsdtPrice(cryptoAsset.trim().toUpperCase());
+    const amountInUsdt = amount * cryptoToUsdt;
+
     const rate = await rates.getPayoutRate(payoutCurrency);
     if (rate === null) {
       res.status(503).json({ error: "Exchange rates unavailable, try again shortly" });
       return;
     }
 
-    const payoutAmount = amount * rate;
+    const payoutAmount = amountInUsdt * rate;
     const fin = finance.computeFinance(payoutAmount);
     const requestNumber = generateRequestNumber();
 
@@ -138,6 +146,7 @@ async function createMyRequest(req: express.Request, res: express.Response): Pro
         clientId,
         clientAccountId: accountId,
         country: country.trim(),
+        recipientDetails: recipientDetails.trim(),
       },
     });
 

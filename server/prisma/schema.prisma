@@ -109,7 +109,9 @@ model Request {
   amlReviewedAt  DateTime?
   amlReviewedBy  String?
 
-  country        String?
+  country           String?
+  recipientDetails  String?   // JSON: { cardNumber, bankName, recipientName, phone? }
+  walletAddress     String?   // Crypto wallet set by admin for this request
 
   createdAt      DateTime      @default(now())
 

@@ -155,7 +155,7 @@ async function createRequest(req: express.Request, res: express.Response): Promi
 async function updateStatus(req: express.Request, res: express.Response): Promise<void> {
   try {
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, walletAddress } = req.body;
 
     if (!ALLOWED_STATUSES.includes(status)) {
       res.status(400).json({ error: "Invalid status" });
@@ -183,9 +183,15 @@ async function updateStatus(req: express.Request, res: express.Response): Promis
 
     const changedBy = req.nexoraUser?.sub ?? "unknown";
 
+    // Build update data — optionally set walletAddress when moving to WAITING_PAYMENT
+    const updateData: Record<string, unknown> = { status };
+    if (status === "WAITING_PAYMENT" && typeof walletAddress === "string" && walletAddress.trim()) {
+      updateData.walletAddress = walletAddress.trim();
+    }
+
     const updated = await prisma.request.update({
       where: { id: String(id) },
-      data: { status },
+      data: updateData,
     });
 
     // Write status history record
