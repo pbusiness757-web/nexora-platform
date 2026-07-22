@@ -16,6 +16,7 @@ import payoutsRoutes = require("./routes/payouts.routes");
 import auditLogsRoutes = require("./routes/auditLogs.routes");
 import adminsRoutes = require("./routes/admins.routes");
 import telegramRoutes = require("./routes/telegram.routes");
+import publicRoutes = require("./routes/public.routes");
 
 const app = express();
 
@@ -49,5 +50,8 @@ app.use("/api/client-requests", clientRequestsRoutes);
 
 // Telegram bot webhook
 app.use("/api/telegram", telegramRoutes);
+
+// Public (no auth) routes
+app.use("/api/public", publicRoutes);
 
 export = app;
