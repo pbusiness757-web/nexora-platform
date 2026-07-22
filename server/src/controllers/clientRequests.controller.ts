@@ -18,6 +18,40 @@ function ensureUploadsDir(subDir: string): string {
   return dir;
 }
 
+/**
+ * Validates that the file buffer's leading bytes match the declared MIME type.
+ * Prevents malicious content from being uploaded under a legitimate file extension.
+ */
+function validateMagicBytes(buffer: Buffer, mimeType: string): boolean {
+  if (buffer.length < 4) return false;
+  switch (mimeType) {
+    case "image/jpeg":
+      // FF D8 FF
+      return buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF;
+    case "image/png":
+      // 89 50 4E 47 0D 0A 1A 0A
+      return (
+        buffer[0] === 0x89 && buffer[1] === 0x50 &&
+        buffer[2] === 0x4E && buffer[3] === 0x47
+      );
+    case "image/webp":
+      // RIFF????WEBP (bytes 0-3 = "RIFF", bytes 8-11 = "WEBP")
+      if (buffer.length < 12) return false;
+      return (
+        buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46 &&
+        buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50
+      );
+    case "application/pdf":
+      // %PDF
+      return (
+        buffer[0] === 0x25 && buffer[1] === 0x50 &&
+        buffer[2] === 0x44 && buffer[3] === 0x46
+      );
+    default:
+      return false;
+  }
+}
+
 function parsePagination(query: express.Request["query"]): {
   skip: number; take: number; page: number; limit: number;
 } {
@@ -286,6 +320,12 @@ async function uploadProof(req: express.Request, res: express.Response): Promise
     const MAX_SIZE = 10 * 1024 * 1024;
     if (buffer.length > MAX_SIZE) {
       res.status(400).json({ error: "File exceeds 10 MB limit" });
+      return;
+    }
+
+    // Magic byte validation — verify actual file content matches declared mimeType
+    if (!validateMagicBytes(buffer, mimeType)) {
+      res.status(400).json({ error: "File content does not match declared type" });
       return;
     }
 
